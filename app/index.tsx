@@ -1,276 +1,192 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Button, TextInput, Alert, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import axios from 'axios';
+import CustomDropdown from '../components/CustomDropdown';
 
-const App = () => {
-  const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState('');
+const NGROK_BASE_URL = 'https://3358-2405-201-c011-e155-493f-9e3c-4455-5965.ngrok-free.app';
+
+const Index = () => {
+  const [users, setUsers] = useState<string[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [selectedTopic, setSelectedTopic] = useState('');
-  const [question, setQuestion] = useState('');
-  const [options, setOptions] = useState([]);
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [questionType, setQuestionType] = useState('');
-  const [testStatus, setTestStatus] = useState('');
-  const [userAnswer, setUserAnswer] = useState('');
-  const [answerStatus, setAnswerStatus] = useState('');
-  const [score, setScore] = useState('');
-  const [questionNumber, setQuestionNumber] = useState(0);
-  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Fetch users
-    fetch('http://127.0.0.1:8000/get_users')
-      .then(response => response.json())
-      .then(data => setUsers(data))
-      .catch(error => console.error('Error fetching users:', error));
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(`${NGROK_BASE_URL}/get_users`);
+      setUsers(response.data.users);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError('Failed to fetch users. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  interface UserSelectHandler {
-    (user: string): void;
-  }
-
-  const handleUserSelect: UserSelectHandler = (user) => {
-    setSelectedUser(user);
-    fetchSubjects(user);
-  };
-
-  interface SubjectResponse {
-    subject: Subject[];
-  }
-
-  const fetchSubjects = async (user: string): Promise<void> => {
+  const fetchSubjects = useCallback(async (user: string) => {
+    setIsLoading(true);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/get_subjects?user=${user}`);
-      const data: SubjectResponse = await response.json();
-      setSubjects(data.subject);
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
+      const response = await axios.get(`${NGROK_BASE_URL}/get_subjects?user=${user}`);
+      setSubjects(response.data.subjects);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching subjects:', err);
+      setError('Failed to fetch subjects. Please try again later.');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
 
-  interface User {
-    id: string;
-    name: string;
-  }
-
-  interface Subject {
-    id: string;
-    name: string;
-  }
-
-  interface Topic {
-    id: string;
-    name: string;
-  }
-
-  interface Question {
-    question: string;
-    options: string[];
-    question_type: string;
-    test_status: string;
-    question_number: number;
-    total_questions: number;
-  }
-
-  const handleSubjectSelect = (subject: string) => {
-    setSelectedSubject(subject);
-    fetchTopics(selectedUser, subject);
-  };
-
-  interface TopicResponse {
-    topic: Topic[];
-  }
-
-  const fetchTopics = async (user: string, subject: string): Promise<void> => {
+  const fetchTopics = useCallback(async (user: string, subject: string) => {
+    setIsLoading(true);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/get_topics?user=${user}&subject=${subject}`);
-      const data: TopicResponse = await response.json();
-      setTopics(data.topic);
-    } catch (error) {
-      console.error('Error fetching topics:', error);
+      const response = await axios.get(`${NGROK_BASE_URL}/get_topics?user=${user}&subject=${subject}`);
+      setTopics(response.data.topics);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching topics:', err);
+      setError('Failed to fetch topics. Please try again later.');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleTopicSelect = (topic: string): void => {
-    setSelectedTopic(topic);
-    fetchQuestion();
-  };
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
-  const fetchQuestion = async () => {
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/get_questions?user=<span class="math-inline">\{selectedUser\}&subject\=</span>{selectedSubject}&topic=${selectedTopic}`);
-      const data = await response.json();
-      setQuestion(data.question);
-      setOptions(data.options);
-      setQuestionType(data.question_type);
-      setTestStatus(data.test_status);
-      setQuestionNumber(data.question_number);
-      setTotalQuestions(data.total_questions);
-    } catch (error) {
-      console.error('Error fetching question:', error);
+  useEffect(() => {
+    if (selectedUser) {
+      console.log('selectedUser:', selectedUser);
+      fetchSubjects(selectedUser);
     }
-  };
+  }, [selectedUser, fetchSubjects]);
 
-  interface OptionSelectHandler {
-    (option: string): void;
-  }
-
-  const handleOptionSelect: OptionSelectHandler = (option) => {
-    if (questionType === 'mcq') {
-      if (selectedOptions.includes(option)) {
-        setSelectedOptions(selectedOptions.filter(o => o !== option));
-      } else {
-        setSelectedOptions([...selectedOptions, option]);
-      }
-    } else {
-      setUserAnswer(option);
+  useEffect(() => {
+    if (selectedUser && selectedSubject) {
+      fetchTopics(selectedUser, selectedSubject);
     }
-  };
+  }, [selectedUser, selectedSubject, fetchTopics]);
 
-  const handleSubmit = async () => {
-    let answer;
-    if (questionType === 'mcq') {
-      answer = selectedOptions.join(',');
-    } else {
-      answer = userAnswer;
-    }
-
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/check_answer?user=<span class="math-inline">\{selectedUser\}&subject\=</span>{selectedSubject}&topic=<span class="math-inline">\{selectedTopic\}&answer\=</span>{answer}`);
-      const data = await response.json();
-      setAnswerStatus(data.answer_status);
-      setScore(data.score);
-
-      if (testStatus === 'completed') {
-        Alert.alert('Congratulations!', 'You have completed the test!');
-      } else {
-        // Delay before fetching next question
-        setTimeout(() => {
-          fetchQuestion();
-        }, 3000);
-      }
-    } catch (error) {
-      console.error('Error submitting answer:', error);
-    }
-  };
 
   return (
     <View style={styles.container}>
-      {/* User Selection */}
-      <Text>Select User:</Text>
-      <View style={styles.dropdown}>
-        {users.map(user => (
-          <TouchableOpacity key={user} onPress={() => handleUserSelect(user)}>
-            <Text style={styles.dropdownItem}>{user}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Subject Selection */}
-      <Text>Select Subject:</Text>
-      <View style={styles.dropdown}>
-        {subjects.map(subject => (
-          <TouchableOpacity key={subject.id} onPress={() => handleSubjectSelect(subject.name)}>
-            <Text style={styles.dropdownItem}>{subject.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Topic Selection */}
-      <Text>Select Topic:</Text>
-      <View style={styles.dropdown}>
-        {topics.map(topic => (
-          <TouchableOpacity key={topic.id} onPress={() => handleTopicSelect(topic.name)}>
-            <Text style={styles.dropdownItem}>{topic.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Question Display */}
-      <Text style={styles.question}>{question}</Text>
-
-      {/* Options Display */}
-      {questionType === 'mcq' && (
-        <View>
-          {options.map(option => (
-            <TouchableOpacity
-              key={option}
-              onPress={() => handleOptionSelect(option)}
-              style={[styles.option, selectedOptions.includes(option) && styles.selectedOption]}
-            >
-              <Text>{option}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      {questionType === 'fill_in_the_blank' && (
-        <View>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your answer"
-            onChangeText={setUserAnswer}
-            value={userAnswer}
+      <View style={styles.dropdownContainer}>
+        <Text style={styles.label}>User:     </Text>
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#007BFF" />
+        ) : error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : (
+          <CustomDropdown
+            data={users.map((user) => ({ label: user, value: user }))}
+            placeholder="Select a user"
+            value={selectedUser}
+            onChange={(item) => setSelectedUser(item.value)}
+            width={200}
+            maxHeight={40}
+            fontBold={true}
+            dropdownStyle={styles.dropdown}
+            placeholderStyle={styles.placeholder}
+            selectedTextStyle={styles.selectedText}
           />
-        </View>
-      )}
+        )}
+      </View>
 
-      {questionType === 'true_or_false' && (
-        <View>
-          <TouchableOpacity onPress={() => handleOptionSelect('True')}>
-            <Text>True</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleOptionSelect('False')}>
-            <Text>False</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={styles.dropdownContainer}>
+        <Text style={styles.label}>Subject:</Text>
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#007BFF" />
+        ) : error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : (
+          <CustomDropdown
+            data={subjects.map((subject) => ({ label: subject, value: subject }))}
+            placeholder="Select a subject"
+            value={selectedSubject}
+            onChange={(item) => setSelectedSubject(item.value)}
+            width={200}
+            maxHeight={40}
+            fontBold={true}
+            dropdownStyle={styles.dropdown}
+            placeholderStyle={styles.placeholder}
+            selectedTextStyle={styles.selectedText}
+          />
+        )}
+      </View>
 
-      {/* Submit Button */}
-      <Button title="Submit" onPress={handleSubmit} />
-
-      {/* Results Display */}
-      <Text>Answer Status: {answerStatus}</Text>
-      <Text>Score: {score}</Text>
-      <Text>Question: {questionNumber} of {totalQuestions}</Text>
+      <View style={styles.dropdownContainer}>
+        <Text style={styles.label}>Topic:    </Text>
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#007BFF" />
+        ) : error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : (
+          <CustomDropdown
+            data={topics.map((topic) => ({ label: topic, value: topic }))}
+            placeholder="Select a topic"
+            value={selectedTopic}
+            onChange={(item) => setSelectedTopic(item.value)}
+            width={200}
+            maxHeight={40}
+            fontBold={true}
+            dropdownStyle={styles.dropdown}
+            placeholderStyle={styles.placeholder}
+            selectedTextStyle={styles.selectedText}
+          />
+        )}
+      </View>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
+    padding: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f8ff',
+  },
+  dropdownContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    width: 'auto',
+  },
+  label: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginRight: 10,
   },
   dropdown: {
-    marginBottom: 10,
-  },
-  dropdownItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  question: {
-    fontSize: 20,
-    marginBottom: 15,
-  },
-  option: {
-    padding: 10,
-    marginBottom: 5,
-    backgroundColor: '#eee',
-  },
-  selectedOption: {
-    backgroundColor: '#ccc',
-  },
-  input: {
-    padding: 10,
-    marginBottom: 15,
-    backgroundColor: '#eee',
+    flex: 1,
+    backgroundColor: '#fff',
+    borderColor: '#007BFF',
+    borderWidth: 1,
     borderRadius: 5,
+    padding: 10,
+  },
+  placeholder: {
+    color: '#007BFF',
+  },
+  selectedText: {
+    color: '#007BFF',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
   },
 });
 
-export default App;
+export default Index;

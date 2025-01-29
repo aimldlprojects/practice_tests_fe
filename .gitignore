@@ -36,3 +36,6 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+ztest.tsx
+components/TestTypeDropdown.tsx
+components/UserDropdown.tsx
