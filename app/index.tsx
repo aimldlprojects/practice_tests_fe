@@ -5,14 +5,15 @@ import CustomDropdown from '../components/CustomDropdown';
 
 const NGROK_BASE_URL = 'https://3358-2405-201-c011-e155-493f-9e3c-4455-5965.ngrok-free.app';
 
+
 const Index = () => {
   const [users, setUsers] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjects, setSubjects] = useState<string[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
-  const [topics, setTopics] = useState<Topic[]>([]);
+  const [topics, setTopics] = useState<string[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -66,7 +67,6 @@ const Index = () => {
 
   useEffect(() => {
     if (selectedUser) {
-      console.log('selectedUser:', selectedUser);
       fetchSubjects(selectedUser);
     }
   }, [selectedUser, fetchSubjects]);
